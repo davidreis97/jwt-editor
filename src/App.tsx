@@ -12,6 +12,7 @@ export default function App() {
   const [signature, setSignature] = useState<string>("")
   const [publicKey, setPublicKey] = useState<string>("")
   const [privateKey, setPrivateKey] = useState<string>("")
+  const [algorithm, setAlgorithm] = useState<string>("RS256")
   const [signatureStatus, setSignatureStatus] = useState<SignatureStatus>({
     message:"Insert a public key to check signature.",
     status: "info"
@@ -28,7 +29,7 @@ export default function App() {
   }
 
   async function verifySignature(decodedHeader: string, decodedPayload: string, signature: string, publicKey: string) {
-    const signatureIsValid = await invoke('signature_is_valid', {header: decodedHeader, payload: decodedPayload, signature, publicKey});
+    const signatureIsValid = await invoke('signature_is_valid', {header: decodedHeader, payload: decodedPayload, signature, publicKey, algorithm});
 
     if (!!!publicKey) {
       setSignatureStatus({
@@ -52,7 +53,7 @@ export default function App() {
   }
 
   async function generateNewEncoded(decodedHeader: string, decodedPayload: string, privateKey: string){
-    const newSignature = await invoke('gen_sign', {header: decodedHeader, payload: decodedPayload, privateKey: privateKey}) as string;
+    const newSignature = await invoke('gen_sign', {header: decodedHeader, payload: decodedPayload, privateKey: privateKey, algorithm}) as string;
     const encodedHeader = await encodeBase64(decodedHeader)
     const encodedPayload = await encodeBase64(decodedPayload)
 
@@ -106,7 +107,7 @@ export default function App() {
           <Flex gap="xs" direction="column" h="100%">
             <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => userChangedHeader(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
             <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => userChangedPayload(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <KeyPairSignature onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
+            <KeyPairSignature onAlgorithmChange={setAlgorithm} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
       </Grid>
