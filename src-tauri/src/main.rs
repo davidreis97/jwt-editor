@@ -6,6 +6,7 @@ use base64::{encode_config, decode_config, DecodeError, URL_SAFE_NO_PAD};
 use jsonwebtoken::{encode, EncodingKey, Header, decode, Algorithm, DecodingKey, Validation};
 use serde_json::Value;
 use openssl::ec::EcKey;
+use std::collections::HashSet;
 
 #[tauri::command]
 fn encode_base64_url_safe(data: &str) -> String {
@@ -73,30 +74,26 @@ fn gen_sign(header: &str, payload: &str, private_key: &str, algorithm: &str) -> 
 
 #[tauri::command]
 fn signature_is_valid(jwt: &str, public_key: &str, algorithm: &str) -> bool {
-    // Parse the public key
-    let key_data = match base64::decode(public_key) {
-        Ok(data) => data,
-        Err(_) => return false,
-    };
+    let public_key_bytes = public_key.as_bytes();
 
-    // Create DecodingKey based on the specified algorithm
     let decoding_key = match algorithm {
-        "RS256" | "RS384" | "RS512" => {
-            match Rsa::public_key_from_pem(&key_data) {
+        "RS256" | "RS384" | "RS512" |
+        "PS256" | "PS384" | "PS512" => {
+            match Rsa::public_key_from_pem(public_key_bytes) {
                 Ok(_) => (),
                 Err(_) => return false,
             };
-            match DecodingKey::from_rsa_pem(&key_data) {
+            match DecodingKey::from_rsa_pem(public_key_bytes) {
                 Ok(key) => key,
                 Err(_) => return false,
             }
         }
         "ES256" | "ES384" | "ES512" => {
-            match EcKey::public_key_from_pem(&key_data) {
+            match EcKey::public_key_from_pem(public_key_bytes) {
                 Ok(_) => (),
                 Err(_) => return false,
             };
-            match DecodingKey::from_ec_pem(&key_data) {
+            match DecodingKey::from_ec_pem(public_key_bytes) {
                 Ok(key) => key,
                 Err(_) => return false,
             }
@@ -104,7 +101,6 @@ fn signature_is_valid(jwt: &str, public_key: &str, algorithm: &str) -> bool {
         _ => return false,
     };
 
-    // Determine the algorithm type
     let algorithm_type = match algorithm {
         "RS256" => Algorithm::RS256,
         "RS384" => Algorithm::RS384,
@@ -118,11 +114,14 @@ fn signature_is_valid(jwt: &str, public_key: &str, algorithm: &str) -> bool {
         _ => return false,
     };
 
-    // Validate the JWT signature
-    let validation = Validation::new(algorithm_type);
+    let mut validation = Validation::default();
+    validation.required_spec_claims = HashSet::new();
+    validation.algorithms = vec![algorithm_type];
+    validation.validate_exp = false;
+    validation.validate_nbf = false;
     match decode::<serde_json::Value>(jwt, &decoding_key, &validation) {
         Ok(_) => true,
-        Err(_) => false,
+        Err(e) => panic!("{}", e),
     }
 }
 
