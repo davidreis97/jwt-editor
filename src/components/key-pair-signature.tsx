@@ -23,7 +23,7 @@ export default function KeyPairSignature(props: KeyPairSignatureProps) {
                     { value: "RS512", label:"RS512", group: "RSA + SHA" },
                     { value: "ES256", label:"ES256", group: "ECDSA + SHA" },
                     { value: "ES384", label:"ES384", group: "ECDSA + SHA" },
-                    { value: "ES512", label:"ES512", group: "ECDSA + SHA" },
+                    //{ value: "ES512", label:"ES512", group: "ECDSA + SHA" },
                     { value: "PS256", label:"PS256", group: "RSA-PSS + SHA" },
                     { value: "PS384", label:"PS384", group: "RSA-PSS + SHA" },
                     { value: "PS512", label:"PS512", group: "RSA-PSS + SHA" },

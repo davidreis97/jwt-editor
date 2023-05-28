@@ -28,8 +28,8 @@ export default function App() {
     setSignature(signature ?? "")
   }
 
-  async function verifySignature(decodedHeader: string, decodedPayload: string, signature: string, publicKey: string) {
-    const signatureIsValid = await invoke('signature_is_valid', {header: decodedHeader, payload: decodedPayload, signature, publicKey, algorithm});
+  async function verifySignature(signature: string, publicKey: string) {
+    const signatureIsValid = await invoke('signature_is_valid', {jwt: encoded, signature, publicKey, algorithm});
 
     if (!!!publicKey) {
       setSignatureStatus({
@@ -53,17 +53,17 @@ export default function App() {
   }
 
   async function generateNewEncoded(decodedHeader: string, decodedPayload: string, privateKey: string){
-    const newSignature = await invoke('gen_sign', {header: decodedHeader, payload: decodedPayload, privateKey: privateKey, algorithm}) as string;
-    const encodedHeader = await encodeBase64(decodedHeader)
-    const encodedPayload = await encodeBase64(decodedPayload)
+    const newToken = await invoke('gen_sign', {header: decodedHeader, payload: decodedPayload, privateKey: privateKey, algorithm}) as string;
 
-    if (newSignature == "ERROR"){
+    if (newToken == "ERROR"){
       return;
     }
 
-    setEncoded(encodedHeader + "." + encodedPayload + "." + newSignature)
+    const newSignature = newToken.split(".").slice(2).join()
+
+    setEncoded(newToken)
     setSignature(newSignature)
-    await verifySignature(decodedHeader, decodedPayload, newSignature, publicKey)
+    await verifySignature(newSignature, publicKey)
   }
 
   async function userChangedPrivateKey(newPrivateKey: string) {
@@ -78,7 +78,7 @@ export default function App() {
     if(!!privateKey){
       await generateNewEncoded(newHeader, decodedPayload, privateKey)
     }else{
-      await verifySignature(newHeader, decodedPayload, signature, publicKey)
+      await verifySignature(signature, publicKey)
     }
   }
 
@@ -88,13 +88,13 @@ export default function App() {
     if(!!privateKey){
       await generateNewEncoded(decodedHeader, newPayload, privateKey)
     }else {
-      await verifySignature(decodedHeader, newPayload, signature, publicKey)
+      await verifySignature(signature, publicKey)
     }
   }
 
   async function userChangedPublicKey(newPublicKey: string) {
     setPublicKey(newPublicKey)
-    await verifySignature(decodedHeader, decodedPayload, signature, newPublicKey)
+    await verifySignature(signature, newPublicKey)
   }
 
   return (
