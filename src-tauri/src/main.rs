@@ -1,11 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use openssl::rsa::Rsa;
+use openssl::x509::X509;
 use base64::{encode_config, decode_config, DecodeError, URL_SAFE_NO_PAD};
-use jsonwebtoken::{encode, EncodingKey, Header, decode, Algorithm, DecodingKey, Validation};
-use serde_json::Value;
-use openssl::ec::EcKey;
+use jsonwebtoken::{encode, EncodingKey, Header, decode, Algorithm, DecodingKey, Validation, jwk::Jwk};
+use serde_json::{Value, from_str};
 use std::collections::HashSet;
 
 #[tauri::command]
@@ -50,10 +49,11 @@ fn gen_sign(header: &str, payload: &str, private_key: &str, algorithm: &str) -> 
         "PS256" => Algorithm::PS256,
         "PS384" => Algorithm::PS384,
         "PS512" => Algorithm::PS512,
+        "EdDSA" => Algorithm::EdDSA,
         _ => panic!("Unsupported algorithm"),
     };
 
-    // Determine the encoding key based on the algorithm type (RSA or EC)
+    // Algorithm rework starts here
     let is_rsa_alg = matches!(
         alg,
         Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 
@@ -65,6 +65,7 @@ fn gen_sign(header: &str, payload: &str, private_key: &str, algorithm: &str) -> 
     } else {
         EncodingKey::from_ec_pem(private_key.as_bytes()).expect("Invalid EC private key")
     };
+    // Algorithm rework ends here
 
     let header: Header = serde_json::from_str(header).expect("Invalid header content");
     let payload: Value = serde_json::from_str(payload).expect("Invalid payload content");
@@ -74,31 +75,40 @@ fn gen_sign(header: &str, payload: &str, private_key: &str, algorithm: &str) -> 
 
 #[tauri::command]
 fn signature_is_valid(jwt: &str, public_key: &str, algorithm: &str) -> bool {
-    let public_key_bytes = public_key.as_bytes();
+    let public_key_bytes = match X509::from_pem(public_key.as_bytes())
+                                    .and_then(|cert| cert.public_key())
+                                    .and_then(|pkey| pkey.public_key_to_pem()) {
+        Ok(pem) => pem.into_boxed_slice(),
+        Err(_) => public_key.as_bytes().into(),
+    };
 
-    let decoding_key = match algorithm {
-        "RS256" | "RS384" | "RS512" |
-        "PS256" | "PS384" | "PS512" => {
-            match Rsa::public_key_from_pem(public_key_bytes) {
-                Ok(_) => (),
-                Err(_) => return false,
-            };
-            match DecodingKey::from_rsa_pem(public_key_bytes) {
-                Ok(key) => key,
-                Err(_) => return false,
+    let decoding_key = match from_str::<Jwk>(public_key) {
+        Ok(jwk) => match DecodingKey::from_jwk(&jwk) {
+            Ok(key) => key,
+            Err(_) => return false
+        },
+        Err(_) => match algorithm {
+            "RS256" | "RS384" | "RS512" |
+            "PS256" | "PS384" | "PS512" => {
+                match DecodingKey::from_rsa_pem(public_key_bytes.as_ref()) {
+                    Ok(key) => key,
+                    Err(_) => return false,
+                }
             }
-        }
-        "ES256" | "ES384" | "ES512" => {
-            match EcKey::public_key_from_pem(public_key_bytes) {
-                Ok(_) => (),
-                Err(_) => return false,
-            };
-            match DecodingKey::from_ec_pem(public_key_bytes) {
-                Ok(key) => key,
-                Err(_) => return false,
+            "ES256" | "ES384" | "ES512" => {
+                match DecodingKey::from_ec_pem(public_key_bytes.as_ref()) {
+                    Ok(key) => key,
+                    Err(_) => return false,
+                }
             }
+            "EdDSA" => {
+                match DecodingKey::from_ed_pem(public_key_bytes.as_ref()) {
+                    Ok(key) => key,
+                    Err(_) => return false,
+                }
+            }
+            _ => return false,
         }
-        _ => return false,
     };
 
     let algorithm_type = match algorithm {
@@ -111,6 +121,7 @@ fn signature_is_valid(jwt: &str, public_key: &str, algorithm: &str) -> bool {
         "PS256" => Algorithm::PS256,
         "PS384" => Algorithm::PS384,
         "PS512" => Algorithm::PS512,
+        "EdDSA" => Algorithm::EdDSA,
         _ => return false,
     };
 

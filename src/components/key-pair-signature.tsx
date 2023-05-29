@@ -27,6 +27,7 @@ export default function KeyPairSignature(props: KeyPairSignatureProps) {
                     { value: "PS256", label:"PS256", group: "RSA-PSS + SHA" },
                     { value: "PS384", label:"PS384", group: "RSA-PSS + SHA" },
                     { value: "PS512", label:"PS512", group: "RSA-PSS + SHA" },
+                    { value: "EdDSA", label:"EdDSA", group: "EdDSA" },
                     ]}
                     value={algorithm}
                     onChange={(alg: string) => {setAlgorithm(alg); props.onAlgorithmChange(alg)}}
