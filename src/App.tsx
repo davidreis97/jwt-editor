@@ -1,42 +1,95 @@
 import { Flex, Grid, MantineProvider, Textarea } from '@mantine/core';
-import { invoke } from '@tauri-apps/api/tauri'
 import { useState } from 'react';
-import KeyPairSignature from './components/key-pair-signature';
-import { decodeBase64, encodeBase64 } from './helpers/base64';
 import SignatureStatus from './helpers/signature-status';
+import { signJWT, verifyJWT } from './logic/crypto';
+import { base64url } from "jose"
+import Signature from './components/signature';
 
 export default function App() {
-  const [encoded, setEncoded] = useState<string>("")
+  const [jwt, setJwt] = useState<string>("")
   const [decodedHeader, setDecodedHeader] = useState<string>("")
   const [decodedPayload, setDecodedPayload] = useState<string>("")
-  const [signature, setSignature] = useState<string>("")
   const [publicKey, setPublicKey] = useState<string>("")
   const [privateKey, setPrivateKey] = useState<string>("")
   const [algorithm, setAlgorithm] = useState<string>("RS256")
   const [signatureStatus, setSignatureStatus] = useState<SignatureStatus>({
-    message:"Insert a public key to check signature.",
+    message:"Insert a token to check signature.",
     status: "info"
   })
 
-  async function userChangeEncoded(newEncoded: string){
-    setEncoded(newEncoded)
+  async function userChangeEncoded(newJwt: string){
+    setJwt(newJwt)
+    if (!!!newJwt) {
+      setSignatureStatus({
+        message:"Insert a token to check signature.",
+        status: "info"
+      })
+    }
 
-    const [newEncodedHeader, newEncodedPayload, signature] = newEncoded.split(".")
+    const [newEncodedHeader, newEncodedPayload, _signature] = newJwt.split(".")
 
-    setDecodedHeader(await decodeBase64(newEncodedHeader ?? ""))
-    setDecodedPayload(await decodeBase64(newEncodedPayload ?? ""))
-    setSignature(signature ?? "")
+    const decodedHeader = new TextDecoder().decode(base64url.decode(newEncodedHeader ?? ""));
+    setDecodedHeader(decodedHeader)
+
+    let newAlg = algorithm;
+    try{
+      newAlg = JSON.parse(decodedHeader).alg
+      if (!!newAlg) { // ++ Check if algorithm is valid and supported
+        setAlgorithm(newAlg)
+      }
+    } catch(e) {}
+
+    setDecodedPayload(new TextDecoder().decode(base64url.decode(newEncodedPayload ?? "")))
+    await verifySignature(newJwt, publicKey, newAlg)
   }
 
-  async function verifySignature(signature: string, publicKey: string) {
-    const signatureIsValid = await invoke('signature_is_valid', {jwt: encoded, signature, publicKey, algorithm});
+  async function userChangedPrivateKey(newPrivateKey: string) {
+    setPrivateKey(newPrivateKey)
 
+    await generateNewEncoded(decodedHeader, decodedPayload, newPrivateKey)
+  }
+
+  async function userChangedHeader(newHeader: string) {
+    setDecodedHeader(newHeader)
+
+    if(!!privateKey){
+      await generateNewEncoded(newHeader, decodedPayload, privateKey)
+    }else{
+      setJwt("")
+    }
+  }
+
+  async function userChangedPayload(newPayload: string) {
+    setDecodedPayload(newPayload)
+
+    if(!!privateKey){
+      await generateNewEncoded(decodedHeader, newPayload, privateKey)
+    }else {
+      setJwt("")
+    }
+  }
+
+  async function userChangedPublicKey(newPublicKey: string) {
+    setPublicKey(newPublicKey)
+    await verifySignature(jwt, newPublicKey, algorithm)
+  }
+
+  async function verifySignature(token: string, publicKey: string, alg: string) {
     if (!!!publicKey) {
       setSignatureStatus({
         message:"Insert a public key to check signature.",
         status: "info"
       })
       return
+    }
+
+    let signatureIsValid = false;
+
+    try {
+      await verifyJWT(token, publicKey, alg)
+      signatureIsValid = true;
+    }catch(e){
+      console.log(e)
     }
 
     if (signatureIsValid) {
@@ -53,61 +106,25 @@ export default function App() {
   }
 
   async function generateNewEncoded(decodedHeader: string, decodedPayload: string, privateKey: string){
-    const newToken = await invoke('gen_sign', {header: decodedHeader, payload: decodedPayload, privateKey: privateKey, algorithm}) as string;
-
-    if (newToken == "ERROR"){
-      return;
-    }
-
-    const newSignature = newToken.split(".").slice(2).join()
-
-    setEncoded(newToken)
-    setSignature(newSignature)
-    await verifySignature(newSignature, publicKey)
-  }
-
-  async function userChangedPrivateKey(newPrivateKey: string) {
-    setPrivateKey(newPrivateKey)
-
-    await generateNewEncoded(decodedHeader, decodedPayload, newPrivateKey)
-  }
-
-  async function userChangedHeader(newHeader: string) {
-    setDecodedHeader(newHeader)
-
-    if(!!privateKey){
-      await generateNewEncoded(newHeader, decodedPayload, privateKey)
-    }else{
-      await verifySignature(signature, publicKey)
-    }
-  }
-
-  async function userChangedPayload(newPayload: string) {
-    setDecodedPayload(newPayload)
-
-    if(!!privateKey){
-      await generateNewEncoded(decodedHeader, newPayload, privateKey)
-    }else {
-      await verifySignature(signature, publicKey)
-    }
-  }
-
-  async function userChangedPublicKey(newPublicKey: string) {
-    setPublicKey(newPublicKey)
-    await verifySignature(signature, newPublicKey)
+    try{
+      const newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);
+      
+      setJwt(newJwt)
+      await verifySignature(newJwt, publicKey, algorithm)
+    } catch (e) {}    
   }
 
   return (
     <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
       <Grid h="100%" grow p="md">
         <Grid.Col h="100%" span={1}>
-          <Textarea placeholder='JWT Token' value={encoded} onChange={(evt) => userChangeEncoded(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => userChangeEncoded(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
         </Grid.Col>
         <Grid.Col h="100%" span={1}>
           <Flex gap="xs" direction="column" h="100%">
             <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => userChangedHeader(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
             <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => userChangedPayload(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <KeyPairSignature onAlgorithmChange={setAlgorithm} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
+            <Signature algorithm={algorithm} onAlgorithmChange={setAlgorithm} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
       </Grid>
