@@ -116,7 +116,7 @@ export default function App() {
 
   return (
     <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
-      <Grid h="100%" grow p="md">
+      <Grid h="100%" grow pt="md" pr="md" pl="md">
         <Grid.Col h="100%" span={1}>
           <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => userChangeEncoded(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
         </Grid.Col>
