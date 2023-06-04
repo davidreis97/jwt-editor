@@ -4,11 +4,14 @@ import isSymmetric from "../helpers/is-symmetric"
 import SignatureStatus, { Status } from "../helpers/signature-status"
 import AsymmetricSignatureInput from "./asymmetric-signature-input"
 import SymmetricSignatureInput from "./symmetric-signature-input"
+import KeyPair from "../helpers/key-pair"
 
 interface SignatureProps {
     onPublicKeyChange: (pubKey: string) => void
     onPrivateKeyChange: (privKey: string) => void
+    onSecretChange: (secret: string) => void
     onAlgorithmChange: (algorithm: string) => void
+    keyPair: KeyPair
     algorithm: string
     signatureStatus: SignatureStatus
 }
@@ -48,8 +51,8 @@ export default function Signature(props: SignatureProps) {
             <Text ml="md">base64UrlEncode(payload),</Text>
             {
                 isSymmetric(props.algorithm) ? 
-                <SymmetricSignatureInput onPrivateKeyChange={props.onPrivateKeyChange} onPublicKeyChange={props.onPublicKeyChange}/> :  
-                <AsymmetricSignatureInput onPrivateKeyChange={props.onPrivateKeyChange} onPublicKeyChange={props.onPublicKeyChange}/>
+                <SymmetricSignatureInput secret={props.keyPair.publicKey} onSecretChange={props.onSecretChange}/> :  
+                <AsymmetricSignatureInput keyPair={props.keyPair} onPrivateKeyChange={props.onPrivateKeyChange} onPublicKeyChange={props.onPublicKeyChange}/>
             }
             <Text>)</Text>
         </Box>
