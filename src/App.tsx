@@ -17,7 +17,7 @@ export default function App() {
     status: "info"
   })
 
-  async function userChangeEncoded(newJwt: string){
+  async function userChangedJwt(newJwt: string){
     setJwt(newJwt)
     if (!!!newJwt) {
       setSignatureStatus({
@@ -47,7 +47,7 @@ export default function App() {
     setDecodedHeader(newHeader)
 
     if(!!keyPair.privateKey){
-      await generateNewEncoded(newHeader, decodedPayload, keyPair.privateKey)
+      await generateNewJwt(newHeader, decodedPayload, keyPair.privateKey)
     }else{
       setJwt("")
     }
@@ -57,7 +57,7 @@ export default function App() {
     setDecodedPayload(newPayload)
 
     if(!!keyPair.privateKey){
-      await generateNewEncoded(decodedHeader, newPayload, keyPair.privateKey)
+      await generateNewJwt(decodedHeader, newPayload, keyPair.privateKey)
     }else {
       setJwt("")
     }
@@ -71,14 +71,29 @@ export default function App() {
   async function userChangedPrivateKey(newPrivateKey: string) {
     setKeyPair((kp) => ({...kp, privateKey: newPrivateKey}))
 
-    await generateNewEncoded(decodedHeader, decodedPayload, newPrivateKey)
+    await generateNewJwt(decodedHeader, decodedPayload, newPrivateKey)
   }
 
   async function userChangedSecret(newSecret: string) {
     setKeyPair((kp) => ({...kp, publicKey: newSecret, privateKey: newSecret}))
 
-    await generateNewEncoded(decodedHeader, decodedPayload, newSecret)
-    await verifySignature(jwt, newSecret, algorithm)
+    const newJwt = await generateNewJwt(decodedHeader, decodedPayload, newSecret)
+    await verifySignature(newJwt, newSecret, algorithm)
+  }
+
+  async function userChangedAlgorithm(newAlgorithm: string) {
+    setAlgorithm(newAlgorithm)
+
+    try{
+      setDecodedHeader(headerStr => {
+        const header = JSON.parse(headerStr)
+        header.alg = newAlgorithm
+        return JSON.stringify(header)
+      })
+    }catch(e){}
+
+    const newJwt = await generateNewJwt(decodedHeader, decodedPayload, keyPair.privateKey)
+    await verifySignature(newJwt, keyPair.publicKey, algorithm)
   }
 
   async function verifySignature(token: string, publicKey: string, alg: string) {
@@ -112,26 +127,29 @@ export default function App() {
     }
   }
 
-  async function generateNewEncoded(decodedHeader: string, decodedPayload: string, privateKey: string){
+  async function generateNewJwt(decodedHeader: string, decodedPayload: string, privateKey: string){
+    let newJwt = ""
+
     try{
-      const newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);
-      
-      setJwt(newJwt)
+      const newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);      
       await verifySignature(newJwt, keyPair.publicKey, algorithm)
-    } catch (e) {}    
+      setJwt(newJwt)
+    } catch (e) {}
+
+    return newJwt
   }
 
   return (
     <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
       <Grid h="100%" grow pt="md" pr="md" pl="md">
         <Grid.Col h="100%" span={1}>
-          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => userChangeEncoded(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => userChangedJwt(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
         </Grid.Col>
         <Grid.Col h="100%" span={1}>
           <Flex gap="xs" direction="column" h="100%">
             <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => userChangedHeader(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
             <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => userChangedPayload(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <Signature algorithm={algorithm} onAlgorithmChange={setAlgorithm /* TODO Should trigger the change of alg in JWT header */} onSecretChange={userChangedSecret} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
+            <Signature algorithm={algorithm} keyPair={keyPair} onAlgorithmChange={userChangedAlgorithm /* TODO Should trigger the change of alg in JWT header and the generation of a new token */} onSecretChange={userChangedSecret} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
       </Grid>
