@@ -4,6 +4,9 @@ on:
     branches:
       - release
 
+env:
+  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+
 jobs:
   publish-tauri:
     permissions:
