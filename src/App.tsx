@@ -4,13 +4,13 @@ import SignatureStatus from './helpers/signature-status';
 import { signJWT, verifyJWT } from './logic/crypto';
 import { base64url } from "jose"
 import Signature from './components/signature';
+import KeyPair from './helpers/key-pair';
 
 export default function App() {
   const [jwt, setJwt] = useState<string>("")
   const [decodedHeader, setDecodedHeader] = useState<string>("")
   const [decodedPayload, setDecodedPayload] = useState<string>("")
-  const [publicKey, setPublicKey] = useState<string>("")
-  const [privateKey, setPrivateKey] = useState<string>("")
+  const [keyPair, setKeyPair] = useState<KeyPair>({privateKey: "", publicKey: ""})
   const [algorithm, setAlgorithm] = useState<string>("RS256")
   const [signatureStatus, setSignatureStatus] = useState<SignatureStatus>({
     message:"Insert a token to check signature.",
@@ -34,26 +34,20 @@ export default function App() {
     let newAlg = algorithm;
     try{
       newAlg = JSON.parse(decodedHeader).alg
-      if (!!newAlg) { // ++ Check if algorithm is valid and supported
+      if (!!newAlg) {
         setAlgorithm(newAlg)
       }
     } catch(e) {}
 
     setDecodedPayload(new TextDecoder().decode(base64url.decode(newEncodedPayload ?? "")))
-    await verifySignature(newJwt, publicKey, newAlg)
-  }
-
-  async function userChangedPrivateKey(newPrivateKey: string) {
-    setPrivateKey(newPrivateKey)
-
-    await generateNewEncoded(decodedHeader, decodedPayload, newPrivateKey)
+    await verifySignature(newJwt, keyPair.publicKey, newAlg)
   }
 
   async function userChangedHeader(newHeader: string) {
     setDecodedHeader(newHeader)
 
-    if(!!privateKey){
-      await generateNewEncoded(newHeader, decodedPayload, privateKey)
+    if(!!keyPair.privateKey){
+      await generateNewEncoded(newHeader, decodedPayload, keyPair.privateKey)
     }else{
       setJwt("")
     }
@@ -62,16 +56,29 @@ export default function App() {
   async function userChangedPayload(newPayload: string) {
     setDecodedPayload(newPayload)
 
-    if(!!privateKey){
-      await generateNewEncoded(decodedHeader, newPayload, privateKey)
+    if(!!keyPair.privateKey){
+      await generateNewEncoded(decodedHeader, newPayload, keyPair.privateKey)
     }else {
       setJwt("")
     }
   }
 
   async function userChangedPublicKey(newPublicKey: string) {
-    setPublicKey(newPublicKey)
+    setKeyPair((kp) => ({...kp, publicKey: newPublicKey}))
     await verifySignature(jwt, newPublicKey, algorithm)
+  }
+
+  async function userChangedPrivateKey(newPrivateKey: string) {
+    setKeyPair((kp) => ({...kp, privateKey: newPrivateKey}))
+
+    await generateNewEncoded(decodedHeader, decodedPayload, newPrivateKey)
+  }
+
+  async function userChangedSecret(newSecret: string) {
+    setKeyPair((kp) => ({...kp, publicKey: newSecret, privateKey: newSecret}))
+
+    await generateNewEncoded(decodedHeader, decodedPayload, newSecret)
+    await verifySignature(jwt, newSecret, algorithm)
   }
 
   async function verifySignature(token: string, publicKey: string, alg: string) {
@@ -110,7 +117,7 @@ export default function App() {
       const newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);
       
       setJwt(newJwt)
-      await verifySignature(newJwt, publicKey, algorithm)
+      await verifySignature(newJwt, keyPair.publicKey, algorithm)
     } catch (e) {}    
   }
 
@@ -124,7 +131,7 @@ export default function App() {
           <Flex gap="xs" direction="column" h="100%">
             <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => userChangedHeader(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
             <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => userChangedPayload(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <Signature algorithm={algorithm} onAlgorithmChange={setAlgorithm} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
+            <Signature algorithm={algorithm} onAlgorithmChange={setAlgorithm /* TODO Should trigger the change of alg in JWT header */} onSecretChange={userChangedSecret} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
       </Grid>
