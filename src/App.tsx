@@ -6,6 +6,8 @@ import { base64url } from "jose"
 import Signature from './components/signature';
 import KeyPair from './helpers/key-pair';
 
+const textDecoder = new TextDecoder()
+
 export default function App() {
   const [jwt, setJwt] = useState<string>("")
   const [decodedHeader, setDecodedHeader] = useState<string>("")
@@ -17,7 +19,7 @@ export default function App() {
     status: "info"
   })
 
-  async function userChangedJwt(newJwt: string){
+  async function handleJwtChange(newJwt: string){
     setJwt(newJwt)
     if (!!!newJwt) {
       setSignatureStatus({
@@ -28,7 +30,7 @@ export default function App() {
 
     const [newEncodedHeader, newEncodedPayload, _signature] = newJwt.split(".")
 
-    const decodedHeader = new TextDecoder().decode(base64url.decode(newEncodedHeader ?? ""));
+    const decodedHeader = textDecoder.decode(base64url.decode(newEncodedHeader ?? ""));
     setDecodedHeader(decodedHeader)
 
     let newAlg = algorithm;
@@ -39,61 +41,59 @@ export default function App() {
       }
     } catch(e) {}
 
-    setDecodedPayload(new TextDecoder().decode(base64url.decode(newEncodedPayload ?? "")))
+    setDecodedPayload(textDecoder.decode(base64url.decode(newEncodedPayload ?? "")))
     await verifySignature(newJwt, keyPair.publicKey, newAlg)
   }
 
-  async function userChangedHeader(newHeader: string) {
+  async function handleHeaderChange(newHeader: string) {
     setDecodedHeader(newHeader)
 
-    if(!!keyPair.privateKey){
+    if(keyPair.privateKey){
       await generateNewJwt(newHeader, decodedPayload, keyPair.privateKey)
     }else{
       setJwt("")
     }
   }
 
-  async function userChangedPayload(newPayload: string) {
+  async function handlePayloadChange(newPayload: string) {
     setDecodedPayload(newPayload)
 
-    if(!!keyPair.privateKey){
+    if(keyPair.privateKey){
       await generateNewJwt(decodedHeader, newPayload, keyPair.privateKey)
     }else {
       setJwt("")
     }
   }
 
-  async function userChangedPublicKey(newPublicKey: string) {
+  async function handlePublicKeyChange(newPublicKey: string) {
     setKeyPair((kp) => ({...kp, publicKey: newPublicKey}))
     await verifySignature(jwt, newPublicKey, algorithm)
   }
 
-  async function userChangedPrivateKey(newPrivateKey: string) {
+  async function handlePrivateKeyChange(newPrivateKey: string) {
     setKeyPair((kp) => ({...kp, privateKey: newPrivateKey}))
-
     await generateNewJwt(decodedHeader, decodedPayload, newPrivateKey)
   }
 
-  async function userChangedSecret(newSecret: string) {
+  async function handleSecretChange(newSecret: string) {
     setKeyPair((kp) => ({...kp, publicKey: newSecret, privateKey: newSecret}))
 
     const newJwt = await generateNewJwt(decodedHeader, decodedPayload, newSecret)
     await verifySignature(newJwt, newSecret, algorithm)
   }
 
-  async function userChangedAlgorithm(newAlgorithm: string) {
+  async function handleAlgorithmChange(newAlgorithm: string) {
     setAlgorithm(newAlgorithm)
 
+    let newDecodedHeader = ""
+
     try{
-      setDecodedHeader(headerStr => {
-        const header = JSON.parse(headerStr)
-        header.alg = newAlgorithm
-        return JSON.stringify(header)
-      })
+      newDecodedHeader = JSON.stringify({...JSON.parse(decodedHeader), alg: newAlgorithm})
+      setDecodedHeader(newDecodedHeader)
     }catch(e){}
 
-    const newJwt = await generateNewJwt(decodedHeader, decodedPayload, keyPair.privateKey)
-    await verifySignature(newJwt, keyPair.publicKey, algorithm)
+    const newJwt = await generateNewJwt(newDecodedHeader, decodedPayload, keyPair.privateKey)
+    await verifySignature(newJwt, keyPair.publicKey, newAlgorithm)
   }
 
   async function verifySignature(token: string, publicKey: string, alg: string) {
@@ -110,9 +110,7 @@ export default function App() {
     try {
       await verifyJWT(token, publicKey, alg)
       signatureIsValid = true;
-    }catch(e){
-      console.log(e)
-    }
+    }catch(e){}
 
     if (signatureIsValid) {
       setSignatureStatus({
@@ -131,8 +129,7 @@ export default function App() {
     let newJwt = ""
 
     try{
-      const newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);      
-      await verifySignature(newJwt, keyPair.publicKey, algorithm)
+      newJwt = await signJWT(JSON.parse(decodedHeader), JSON.parse(decodedPayload), privateKey);      
       setJwt(newJwt)
     } catch (e) {}
 
@@ -143,13 +140,13 @@ export default function App() {
     <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
       <Grid h="100%" grow pt="md" pr="md" pl="md">
         <Grid.Col h="100%" span={1}>
-          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => userChangedJwt(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => handleJwtChange(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
         </Grid.Col>
         <Grid.Col h="100%" span={1}>
           <Flex gap="xs" direction="column" h="100%">
-            <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => userChangedHeader(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => userChangedPayload(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <Signature algorithm={algorithm} keyPair={keyPair} onAlgorithmChange={userChangedAlgorithm /* TODO Should trigger the change of alg in JWT header and the generation of a new token */} onSecretChange={userChangedSecret} onPrivateKeyChange={userChangedPrivateKey} onPublicKeyChange={userChangedPublicKey} signatureStatus={signatureStatus}/>
+            <Textarea placeholder='Header' value={decodedHeader} onChange={(evt) => handleHeaderChange(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+            <Textarea placeholder='Payload' value={decodedPayload} onChange={(evt) => handlePayloadChange(evt.target.value)} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+            <Signature algorithm={algorithm} keyPair={keyPair} onAlgorithmChange={handleAlgorithmChange} onSecretChange={handleSecretChange} onPrivateKeyChange={handlePrivateKeyChange} onPublicKeyChange={handlePublicKeyChange} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
       </Grid>
