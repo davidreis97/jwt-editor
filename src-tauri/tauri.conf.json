@@ -24,13 +24,12 @@
         "icons/icon.ico"
       ],
       "identifier": "com.davidreis.jwteditor",
-      "targets": "all"
+      "targets": "all",
+      "copyright": "david.alex.reis.97@gmail.com",
+			"category": "DeveloperTool"
     },
     "security": {
       "csp": null
-    },
-    "updater": {
-      "active": false
     },
     "windows": [
       {
