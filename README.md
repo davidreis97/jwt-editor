@@ -3,8 +3,6 @@
   <h1>JWT Editor</h1>
 </div>
 
-## Overview
-
 JWT Editor is a secure and easy-to-use offline tool designed for visualizing and editing JSON Web Tokens (JWTs).
 
 <div align="center">
