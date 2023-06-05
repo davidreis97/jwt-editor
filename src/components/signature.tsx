@@ -18,7 +18,7 @@ interface SignatureProps {
 
 export default function Signature(props: SignatureProps) {
     return (
-      <Paper h="fit-content" sx={{overflow:"scroll"}} withBorder>
+      <Paper h="fit-content" sx={{overflow:"auto"}} withBorder>
         <Box m="sm">
             <Flex align="center" gap="0.2rem" mb="0.3rem">
                 <select
