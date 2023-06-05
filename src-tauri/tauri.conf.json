@@ -7,8 +7,8 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "jwt-editor",
-    "version": "0.0.1"
+    "productName": "JWT Editor",
+    "version": "0.0.2"
   },
   "tauri": {
     "allowlist": {
