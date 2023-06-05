@@ -3,7 +3,7 @@
   <h1>JWT Editor</h1>
 </div>
 
-JWT Editor is a secure and easy-to-use offline tool designed for visualizing and editing JSON Web Tokens (JWTs).
+JWT Editor is a secure and easy-to-use offline tool designed for visualizing and editing JSON Web Tokens (JWTs). Powered by the [Tauri](https://tauri.app/) framework.
 
 <div align="center">
   <img src="https://github.com/davidreis97/jwt-editor/blob/master/assets/screenshot.png?raw=true" alt="Application screenshot" />
