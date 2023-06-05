@@ -31,7 +31,7 @@ JWT Editor aims to achieve feature parity with [jwt.io](https://jwt.io) as its o
 
 ## Security
 
-For maximum security, we recommend reviewing the source code and compiling the app yourself, although compiled releases and auto-update support are provided for convenience.
+For maximum security, I recommend reviewing the source code and compiling the app yourself, although [compiled releases](https://github.com/davidreis97/jwt-editor/releases/latest/) and auto-update support are provided for convenience.
 
 ## Build Instructions
 
