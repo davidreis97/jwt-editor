@@ -8,10 +8,12 @@ import KeyPair from './helpers/key-pair';
 import React from 'react';
 import { canJsonParse, cleanUpJsonInput, formatJson } from './helpers/json';
 import useActiveElement from './helpers/use-active-element';
+import useMonospaceTextAreaStyles from './helpers/use-monospace-text-area-styles';
 
 const textDecoder = new TextDecoder()
 
 export default function App() {
+  const monospaceTextAreaStyles = useMonospaceTextAreaStyles();
   const [jwt, setJwt] = useState<string>("")
   const [decodedHeader, setDecodedHeader] = useState<string>("")
   const [decodedPayload, setDecodedPayload] = useState<string>("")
@@ -161,12 +163,12 @@ export default function App() {
     <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
       <Grid h="100%" grow pt="md" pr="md" pl="md">
         <Grid.Col h="100%" span={1}>
-          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => handleJwtChange(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+          <Textarea classNames={{input:monospaceTextAreaStyles.classes.input}} placeholder='JWT Token' value={jwt} onChange={(evt) => handleJwtChange(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
         </Grid.Col>
         <Grid.Col h="100%" span={1}>
           <Flex gap="xs" direction="column" h="100%">
-            <JsonInput formatOnBlur ref={headerInputRef}  error={!canJsonParse(decodedHeader)} placeholder='Header' value={decodedHeader} onChange={(value) => handleHeaderChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <JsonInput formatOnBlur ref={payloadInputRef} error={!canJsonParse(decodedPayload)} placeholder='Payload' value={decodedPayload} onChange={(value) => handlePayloadChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+            <JsonInput size="md" formatOnBlur ref={headerInputRef} error={!canJsonParse(decodedHeader)} placeholder='Header' value={decodedHeader} onChange={(value) => handleHeaderChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+            <JsonInput size="md" formatOnBlur ref={payloadInputRef} error={!canJsonParse(decodedPayload)} placeholder='Payload' value={decodedPayload} onChange={(value) => handlePayloadChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
             <Signature algorithm={algorithm} keyPair={keyPair} onAlgorithmChange={handleAlgorithmChange} onSecretChange={handleSecretChange} onPrivateKeyChange={handlePrivateKeyChange} onPublicKeyChange={handlePublicKeyChange} signatureStatus={signatureStatus}/>
           </Flex>
         </Grid.Col>
