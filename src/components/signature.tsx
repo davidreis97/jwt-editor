@@ -52,7 +52,7 @@ export default function Signature(props: SignatureProps) {
             {
                 isSymmetric(props.algorithm) ? 
                 <SymmetricSignatureInput secret={props.keyPair.publicKey} onSecretChange={props.onSecretChange}/> :  
-                <AsymmetricSignatureInput keyPair={props.keyPair} onPrivateKeyChange={props.onPrivateKeyChange} onPublicKeyChange={props.onPublicKeyChange}/>
+                <AsymmetricSignatureInput algorithm={props.algorithm} keyPair={props.keyPair} onPrivateKeyChange={props.onPrivateKeyChange} onPublicKeyChange={props.onPublicKeyChange}/>
             }
             <Text>)</Text>
         </Box>
