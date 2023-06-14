@@ -24,6 +24,15 @@ async function parseKey(key: string, alg: string) : Promise<KeyLike | Uint8Array
     throw "Could not parse key."
 }
 
+export async function isValidAsymmetricKey(key: string, algorithm: string) {
+    try {
+        await parseKey(key, algorithm)
+        return true;
+    } catch(e) {
+        return false;
+    }
+}
+
 export async function signJWT(header: JWTHeaderParameters, payload: JWTPayload, privateKey: string) {
     return await new SignJWT(payload)
             .setProtectedHeader(header)
