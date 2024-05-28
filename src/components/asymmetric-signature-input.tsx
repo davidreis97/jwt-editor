@@ -1,7 +1,7 @@
-import { Flex, Text, Textarea } from "@mantine/core"
+import { Flex, Text, Textarea } from "@mantine/core";
+import { useEffect, useState } from "react";
 import KeyPair from "../helpers/key-pair";
 import { isValidAsymmetricKey } from "../logic/crypto";
-import { useEffect, useState } from "react";
 
 interface AsymmetricSignatureInputProps {
     onPublicKeyChange: (pubKey: string) => void

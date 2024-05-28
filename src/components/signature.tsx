@@ -1,10 +1,10 @@
 import { Box, Divider, Flex, Paper, Text } from "@mantine/core"
 import { IconCircleCheck, IconCircleX, IconHelpCircle, IconInfoCircle } from "@tabler/icons-react"
 import isSymmetric from "../helpers/is-symmetric"
+import KeyPair from "../helpers/key-pair"
 import SignatureStatus, { Status } from "../helpers/signature-status"
 import AsymmetricSignatureInput from "./asymmetric-signature-input"
 import SymmetricSignatureInput from "./symmetric-signature-input"
-import KeyPair from "../helpers/key-pair"
 
 interface SignatureProps {
     onPublicKeyChange: (pubKey: string) => void
@@ -18,7 +18,7 @@ interface SignatureProps {
 
 export default function Signature(props: SignatureProps) {
     return (
-      <Paper h="fit-content" sx={{overflow:"auto"}} withBorder>
+      <Paper h="fit-content" style={{overflow:"auto"}} withBorder>
         <Box m="sm">
             <Flex align="center" gap="0.2rem" mb="0.3rem">
                 <select
@@ -59,7 +59,7 @@ export default function Signature(props: SignatureProps) {
         <Divider/>
         <Flex bg={statusToColor(props.signatureStatus.status)} align="center" p="0.3rem" pl="sm">
             {statusToIcon(props.signatureStatus.status)}
-            <Text align="center" ml="0.4rem">{props.signatureStatus.message}</Text>
+            <Text ta="center" ml="0.4rem">{props.signatureStatus.message}</Text>
         </Flex>
       </Paper>
     );
