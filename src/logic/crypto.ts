@@ -1,6 +1,14 @@
-import { JWTHeaderParameters, JWTPayload, KeyLike, SignJWT, importJWK, importPKCS8, importSPKI, importX509, jwtVerify } from "jose"
+import { JWTHeaderParameters, JWTPayload, KeyLike, SignJWT, importJWK, importPKCS8, importSPKI, importX509, jwtVerify } from "jose";
 
 async function parseKey(key: string, alg: string) : Promise<KeyLike | Uint8Array> {
+    try {
+        return await parseKeyInner(key, alg);
+    }catch(e) { /* Not in raw text. */}
+
+    return parseKeyInner(atob(key), alg);
+}
+
+async function parseKeyInner(key: string, alg: string) : Promise<KeyLike | Uint8Array> {
     if (alg == "HS256" || alg == "HS384" || alg == "HS512"){
         return new TextEncoder().encode(key)
     }

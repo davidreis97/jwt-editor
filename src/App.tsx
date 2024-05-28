@@ -1,19 +1,17 @@
-import { Flex, Grid, JsonInput, MantineProvider, Textarea } from '@mantine/core';
-import { useEffect, useState } from 'react';
-import SignatureStatus from './helpers/signature-status';
-import { signJWT, verifyJWT } from './logic/crypto';
-import { base64url } from "jose"
+import { Box, Flex, JsonInput, MantineProvider, SimpleGrid, Textarea } from '@mantine/core';
+import '@mantine/core/styles.css';
+import { base64url } from "jose";
+import React, { useEffect, useState } from 'react';
 import Signature from './components/signature';
-import KeyPair from './helpers/key-pair';
-import React from 'react';
 import { canJsonParse, cleanUpJsonInput, formatJson } from './helpers/json';
+import KeyPair from './helpers/key-pair';
+import SignatureStatus from './helpers/signature-status';
 import useActiveElement from './helpers/use-active-element';
-import useMonospaceTextAreaStyles from './helpers/use-monospace-text-area-styles';
+import { signJWT, verifyJWT } from './logic/crypto';
 
 const textDecoder = new TextDecoder()
 
 export default function App() {
-  const monospaceTextAreaStyles = useMonospaceTextAreaStyles();
   const [jwt, setJwt] = useState<string>("")
   const [decodedHeader, setDecodedHeader] = useState<string>("")
   const [decodedPayload, setDecodedPayload] = useState<string>("")
@@ -160,19 +158,19 @@ export default function App() {
   }
 
   return (
-    <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
-      <Grid h="100%" grow pt="md" pr="md" pl="md">
-        <Grid.Col h="100%" span={1}>
-          <Textarea classNames={{input:monospaceTextAreaStyles.classes.input}} placeholder='JWT Token' value={jwt} onChange={(evt) => handleJwtChange(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-        </Grid.Col>
-        <Grid.Col h="100%" span={1}>
+    <MantineProvider defaultColorScheme='dark'>
+      <SimpleGrid cols={2} h="100%" p="md">
+        <Box>
+          <Textarea placeholder='JWT Token' value={jwt} onChange={(evt) => handleJwtChange(evt.target.value)} h="100%" styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+        </Box>
+        <Box>
           <Flex gap="xs" direction="column" h="100%">
-            <JsonInput size="md" formatOnBlur ref={headerInputRef} error={!canJsonParse(decodedHeader)} placeholder='Header' value={decodedHeader} onChange={(value) => handleHeaderChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
-            <JsonInput size="md" formatOnBlur ref={payloadInputRef} error={!canJsonParse(decodedPayload)} placeholder='Payload' value={decodedPayload} onChange={(value) => handlePayloadChange(cleanUpJsonInput(value))} sx={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%"}}} />
+            <JsonInput formatOnBlur ref={headerInputRef} error={!canJsonParse(decodedHeader)} placeholder='Header' value={decodedHeader} onChange={(value) => handleHeaderChange(cleanUpJsonInput(value))} style={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%", fontSize:"13px"}}} />
+            <JsonInput formatOnBlur ref={payloadInputRef} error={!canJsonParse(decodedPayload)} placeholder='Payload' value={decodedPayload} onChange={(value) => handlePayloadChange(cleanUpJsonInput(value))} style={{flexGrow:1}} styles={{wrapper:{height: "100%"}, input:{height: "100%", fontSize: "13px"}}} />
             <Signature algorithm={algorithm} keyPair={keyPair} onAlgorithmChange={handleAlgorithmChange} onSecretChange={handleSecretChange} onPrivateKeyChange={handlePrivateKeyChange} onPublicKeyChange={handlePublicKeyChange} signatureStatus={signatureStatus}/>
           </Flex>
-        </Grid.Col>
-      </Grid>
+        </Box>
+      </SimpleGrid>
     </MantineProvider>
   );
 }
